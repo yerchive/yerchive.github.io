@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YZY SOUND</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* YZY AESTHETIC OVERRIDES */
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Industrial / Raw feel */
+            background-color: #ffffff;
+            color: #000000;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Custom Scrollbar to maintain minimalism */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #ffffff;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d4d4d4;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a3a3a3;
+        }
+
+        /* Utility */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .hover-invert:hover {
+            background-color: black;
+            color: white;
+        }
+        
+        /* Range Input Styling (The Slider) */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 0px; /* Sharp edges */
+            background: #000000;
+            cursor: pointer;
+            margin-top: -5px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: #e5e5e5;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen max-h-screen">
+
+    <!-- NAV / HEADER -->
+    <header class="flex justify-between items-center px-6 py-4 border-b border-neutral-100 uppercase text-xs tracking-widest sticky top-0 bg-white/95 z-50 backdrop-blur-sm">
+        <div class="font-bold">YZY SND</div>
+        <div class="text-neutral-400">Streaming Service</div>
+        <div class="font-bold cursor-pointer hover:text-neutral-500">CART (0)</div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- ALBUM GRID (Left/Main View) -->
+        <div id="album-grid" class="flex-1 overflow-y-auto p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-12 content-start">
+            <!-- Albums injected via JS -->
+        </div>
+
+        <!-- SIDEBAR / TRACKLIST (Slide-over on mobile, fixed right on desktop) -->
+        <div id="sidebar" class="fixed inset-0 bg-white z-40 transform translate-x-full transition-transform duration-300 md:relative md:translate-x-0 md:w-1/3 lg:w-1/4 md:border-l md:border-neutral-100 flex flex-col hidden">
+            
+            <div class="p-6 border-b border-neutral-100 flex justify-between items-start">
+                <div>
+                    <h2 id="view-album-title" class="text-lg font-bold uppercase tracking-tight mb-1">SELECT ALBUM</h2>
+                    <p id="view-album-artist" class="text-xs text-neutral-400 uppercase tracking-widest">NO SELECTION</p>
+                </div>
+                <button id="close-sidebar" class="md:hidden text-xl hover:text-neutral-500">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Tracks Container -->
+            <div id="track-list" class="flex-1 overflow-y-auto p-0">
+                <div class="h-full flex items-center justify-center text-xs text-neutral-300 uppercase tracking-widest">
+                    Select an item to view contents
+                </div>
+            </div>
+
+            <!-- Album Cover in Sidebar (Bottom) -->
+            <div class="p-6 mt-auto hidden md:block">
+                <img id="view-cover-image" src="" class="w-full aspect-square object-cover grayscale opacity-0 transition-opacity duration-500 bg-neutral-100">
+            </div>
+        </div>
+
+    </main>
+
+    <!-- PLAYER BAR (Bottom) -->
+    <footer class="h-16 border-t border-neutral-100 bg-white flex items-center px-6 gap-6 z-50">
+        
+        <!-- Controls -->
+        <div class="flex items-center gap-6">
+            <button id="prev-btn" class="hover:text-neutral-500 transition-colors"><i class="fa-solid fa-backward-step"></i></button>
+            <button id="play-btn" class="hover:text-neutral-500 transition-colors text-xl"><i class="fa-solid fa-play"></i></button>
+            <button id="next-btn" class="hover:text-neutral-500 transition-colors"><i class="fa-solid fa-forward-step"></i></button>
+        </div>
+
+        <!-- Info & Progress -->
+        <div class="flex-1 flex flex-col justify-center gap-1">
+            <div class="flex justify-between text-[10px] uppercase tracking-wider text-neutral-400">
+                <span id="player-title">NOT PLAYING</span>
+                <span id="player-time">0:00 / 0:00</span>
+            </div>
+            <input type="range" id="progress-bar" value="0" min="0" max="100" step="0.1">
+        </div>
+
+        <!-- Volume (Hidden on small mobile) -->
+        <div class="hidden sm:flex items-center gap-2 w-24">
+            <i class="fa-solid fa-volume-low text-xs text-neutral-400"></i>
+            <input type="range" id="volume-bar" value="80" min="0" max="100">
+        </div>
+    </footer>
+
+    <!-- LOGIC -->
+    <script>
+        // ==========================================
+        //         CONFIGURATION ZONE
+        // ==========================================
+        // Add your albums and tracks here.
+        // Use standard MP3 urls. 
+        // For 'cover', use square images.
+        // ==========================================
+
+        const CATALOG = [
+            {
+                id: 1,
+                title: "VULTURES 3",
+                artist: "¥$",
+                cover: "https://placehold.co/600x600/e5e5e5/000000/png?text=V3&font=oswald",
+                description: "UNRELEASED",
+                tracks: [
+                    { title: "SLIDE", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+                    { title: "TIME MOVING SLOW", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+                    { title: "FIELD TRIP", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
+                ]
+            },
+            {
+                id: 2,
+                title: "DONDA 2",
+                artist: "KANYE WEST",
+                cover: "https://placehold.co/600x600/000000/ffffff/png?text=D2&font=oswald",
+                description: "STEM PLAYER EXCLUSIVE",
+                tracks: [
+                    { title: "TRUE LOVE", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+                    { title: "BROKEN ROAD", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
+                    { title: "GET LOST", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
+                    { title: "TOO EASY", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" }
+                ]
+            },
+            {
+                id: 3,
+                title: "YEEZUS",
+                artist: "KANYE WEST",
+                cover: "https://placehold.co/600x600/cccccc/ff0000/png?text=YZS&font=oswald",
+                description: "MINIMALIST",
+                tracks: [
+                    { title: "ON SIGHT", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
+                    { title: "BLACK SKINHEAD", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3" },
+                    { title: "I AM A GOD", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" }
+                ]
+            },
+            {
+                id: 4,
+                title: "JESUS IS KING",
+                artist: "KANYE WEST",
+                cover: "https://placehold.co/600x600/0000cc/ffffff/png?text=JIK&font=oswald",
+                description: "GOSPEL",
+                tracks: [
+                    { title: "EVERY HOUR", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3" },
+                    { title: "SELAH", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3" }
+                ]
+            },
+            {
+                id: 5,
+                title: "THE LIFE OF PABLO",
+                artist: "KANYE WEST",
+                cover: "https://placehold.co/600x600/ff8800/000000/png?text=TLOP&font=oswald",
+                description: "WHICH / ONE",
+                tracks: [
+                    { title: "ULTRALIGHT BEAM", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3" },
+                    { title: "FATHER STRETCH MY HANDS", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3" }
+                ]
+            },
+            {
+                id: 6,
+                title: "GRADUATION",
+                artist: "KANYE WEST",
+                cover: "https://placehold.co/600x600/aa00cc/ffffff/png?text=GRAD&font=oswald",
+                description: "CLASSIC",
+                tracks: [
+                    { title: "GOOD MORNING", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" },
+                    { title: "CHAMPION", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3" }
+                ]
+            }
+        ];
+
+        // ==========================================
+        //           APPLICATION LOGIC
+        // ==========================================
+
+        const audio = new Audio();
+        let currentPlaylist = [];
+        let currentTrackIndex = 0;
+        let isPlaying = false;
+
+        // Elements
+        const gridEl = document.getElementById('album-grid');
+        const sidebarEl = document.getElementById('sidebar');
+        const trackListEl = document.getElementById('track-list');
+        const viewTitleEl = document.getElementById('view-album-title');
+        const viewArtistEl = document.getElementById('view-album-artist');
+        const viewCoverEl = document.getElementById('view-cover-image');
+        const playBtn = document.getElementById('play-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const playerTitle = document.getElementById('player-title');
+        const playerTime = document.getElementById('player-time');
+        const volumeBar = document.getElementById('volume-bar');
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+
+        // Init
+        function init() {
+            renderGrid();
+            
+            // Event Listeners
+            playBtn.addEventListener('click', togglePlay);
+            prevBtn.addEventListener('click', playPrev);
+            nextBtn.addEventListener('click', playNext);
+            
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('ended', playNext);
+            
+            progressBar.addEventListener('input', (e) => {
+                const time = (e.target.value / 100) * audio.duration;
+                audio.currentTime = time;
+            });
+            
+            volumeBar.addEventListener('input', (e) => {
+                audio.volume = e.target.value / 100;
+            });
+
+            closeSidebarBtn.addEventListener('click', () => {
+                sidebarEl.classList.add('translate-x-full');
+            });
+        }
+
+        // Render Albums
+        function renderGrid() {
+            gridEl.innerHTML = '';
+            CATALOG.forEach(album => {
+                const card = document.createElement('div');
+                card.className = 'group cursor-pointer flex flex-col gap-2';
+                card.innerHTML = `
+                    <div class="relative w-full aspect-square bg-neutral-100 overflow-hidden">
+                        <img src="${album.cover}" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300 group-hover:scale-105" alt="${album.title}">
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold uppercase tracking-wide leading-none">${album.title}</span>
+                        <span class="text-[10px] text-neutral-400 uppercase tracking-widest mt-1">${album.artist}</span>
+                    </div>
+                `;
+                card.onclick = () => openAlbum(album);
+                gridEl.appendChild(card);
+            });
+        }
+
+        // Open Album in Sidebar
+        function openAlbum(album) {
+            // Mobile Sidebar Logic
+            sidebarEl.classList.remove('hidden');
+            // Small timeout to allow transition
+            setTimeout(() => {
+                sidebarEl.classList.remove('translate-x-full');
+            }, 10);
+
+            viewTitleEl.textContent = album.title;
+            viewArtistEl.textContent = album.artist;
+            viewCoverEl.src = album.cover;
+            viewCoverEl.classList.remove('opacity-0');
+
+            trackListEl.innerHTML = '';
+            
+            album.tracks.forEach((track, index) => {
+                const row = document.createElement('div');
+                row.className = 'group flex justify-between items-center py-3 px-6 cursor-pointer hover:bg-black hover:text-white transition-colors border-b border-neutral-50 last:border-0';
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] text-neutral-400 w-4 group-hover:text-neutral-500 font-mono">${index + 1}</span>
+                        <span class="text-xs uppercase tracking-wide font-medium">${track.title}</span>
+                    </div>
+                    <i class="fa-solid fa-play text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                `;
+                row.onclick = () => loadTrack(album, index);
+                trackListEl.appendChild(row);
+            });
+        }
+
+        // Player Logic
+        function loadTrack(album, index) {
+            currentPlaylist = album.tracks;
+            currentTrackIndex = index;
+            
+            const track = currentPlaylist[index];
+            audio.src = track.url;
+            
+            playerTitle.textContent = `${album.artist} - ${track.title}`;
+            
+            playAudio();
+            updatePlayButtonUI(true);
+        }
+
+        function togglePlay() {
+            if (audio.paused && audio.src) {
+                playAudio();
+            } else if (!audio.paused) {
+                pauseAudio();
+            }
+        }
+
+        function playAudio() {
+            if(!audio.src) return;
+            audio.play().catch(e => console.log("Playback failed (likely placeholder url issue):", e));
+            isPlaying = true;
+            updatePlayButtonUI(true);
+        }
+
+        function pauseAudio() {
+            audio.pause();
+            isPlaying = false;
+            updatePlayButtonUI(false);
+        }
+
+        function playNext() {
+            if (currentTrackIndex < currentPlaylist.length - 1) {
+                currentTrackIndex++;
+                // Find current album info for display (a bit hacky since we flattened playlist)
+                // In a real app we'd store context. For now we just update audio.
+                audio.src = currentPlaylist[currentTrackIndex].url;
+                playerTitle.textContent = playerTitle.textContent.split(' - ')[0] + ' - ' + currentPlaylist[currentTrackIndex].title;
+                playAudio();
+            } else {
+                // Loop to start
+                currentTrackIndex = 0;
+                audio.src = currentPlaylist[currentTrackIndex].url;
+                playerTitle.textContent = playerTitle.textContent.split(' - ')[0] + ' - ' + currentPlaylist[currentTrackIndex].title;
+                playAudio();
+            }
+        }
+
+        function playPrev() {
+            if (currentTrackIndex > 0) {
+                currentTrackIndex--;
+                audio.src = currentPlaylist[currentTrackIndex].url;
+                playerTitle.textContent = playerTitle.textContent.split(' - ')[0] + ' - ' + currentPlaylist[currentTrackIndex].title;
+                playAudio();
+            }
+        }
+
+        function updatePlayButtonUI(playing) {
+            playBtn.innerHTML = playing ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+        }
+
+        function updateProgress() {
+            if (isNaN(audio.duration)) return;
+            const percentage = (audio.currentTime / audio.duration) * 100;
+            progressBar.value = percentage;
+            
+            const curMins = Math.floor(audio.currentTime / 60);
+            const curSecs = Math.floor(audio.currentTime % 60);
+            const durMins = Math.floor(audio.duration / 60);
+            const durSecs = Math.floor(audio.duration % 60);
+            
+            playerTime.textContent = `${curMins}:${curSecs.toString().padStart(2, '0')} / ${durMins}:${durSecs.toString().padStart(2, '0')}`;
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
