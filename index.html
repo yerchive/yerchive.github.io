@@ -10,7 +10,8 @@
             --card-bg: #1e1e1e;
             --text-color: #ffffff;
             --text-muted: #b3b3b3;
-            --accent-color: #1db954; /* Clean streaming-style green */
+            --accent-color: #1db954;
+            --player-bg: #181818;
         }
 
         body {
@@ -19,6 +20,7 @@
             color: var(--text-color);
             margin: 0;
             padding: 20px;
+            padding-bottom: 110px; /* Space so the player bar doesn't block content */
         }
 
         header {
@@ -28,10 +30,7 @@
             padding-bottom: 20px;
         }
 
-        h1 {
-            margin: 0;
-            font-size: 2.5rem;
-        }
+        h1 { margin: 0; font-size: 2.5rem; }
 
         .library-container {
             max-width: 1200px;
@@ -49,9 +48,7 @@
             transition: transform 0.2s ease;
         }
 
-        .album-card:hover {
-            transform: translateY(-5px);
-        }
+        .album-card:hover { transform: translateY(-5px); }
 
         .album-art-placeholder {
             width: 100%;
@@ -65,26 +62,11 @@
             margin-bottom: 15px;
         }
 
-        .album-title {
-            font-size: 1.4rem;
-            margin: 0 0 5px 0;
-            font-weight: bold;
-        }
+        .album-title { font-size: 1.4rem; margin: 0 0 5px 0; font-weight: bold; }
+        .album-meta { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px; }
 
-        .album-meta {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            margin-bottom: 15px;
-        }
-
-        .track-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            border-top: 1px solid #333;
-            padding-top: 10px;
-        }
-
+        .track-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid #333; padding-top: 10px; }
+        
         .track-item {
             display: flex;
             justify-content: space-between;
@@ -99,8 +81,42 @@
             color: var(--accent-color);
         }
 
-        .track-duration {
-            color: var(--text-muted);
+        .track-duration { color: var(--text-muted); }
+
+        /* Persistent Player Bar Styling */
+        .player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--player-bg);
+            border-top: 1px solid #282828;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .current-track-info {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        #now-playing-title { font-weight: bold; font-size: 1rem; margin-bottom: 2px; }
+        #now-playing-meta { font-size: 0.85rem; color: var(--text-muted); }
+
+        .audio-controls {
+            flex: 2;
+            display: flex;
+            justify-content: center;
+        }
+
+        audio {
+            width: 100%;
+            max-width: 600px;
+            outline: none;
         }
     </style>
 </head>
@@ -113,8 +129,19 @@
     <main class="library-container" id="library">
         </main>
 
+    <div class="player-bar">
+        <div class="current-track-info">
+            <div id="now-playing-title">No Track Selected</div>
+            <div id="now-playing-meta">Choose a song to start jamming</div>
+        </div>
+        <div class="audio-controls">
+            <audio id="audio-player" controls></audio>
+        </div>
+    </div>
+
     <script>
-        // 1. Core Data Structure (The Basics)
+        // 1. Data Collection 
+        // Simply paste your standard Google Drive sharing links into the 'file' parameter.
         const musicLibrary = [
             {
                 title: "Discovery",
@@ -122,46 +149,59 @@
                 year: 2001,
                 icon: "🤖",
                 tracks: [
-                    { title: "One More Time", duration: "5:20", file: "one_more_time.mp3" },
-                    { title: "Aerodynamic", duration: "3:27", file: "aerodynamic.mp3" },
-                    { title: "Digital Love", duration: "4:58", file: "digital_love.mp3" }
-                ]
-            },
-            {
-                title: "Abbey Road",
-                artist: "The Beatles",
-                year: 1969,
-                icon: "🍏",
-                tracks: [
-                    { title: "Come Together", duration: "4:20", file: "come_together.mp3" },
-                    { title: "Something", duration: "3:03", file: "something.mp3" }
+                    { 
+                        title: "One More Time", 
+                        duration: "5:20", 
+                        file: "https://drive.google.com/file/d/166jxMcfmhUAevwj7QGz5HizLJ-cRj73T/view?usp=sharing" 
+                    },
+                    { 
+                        title: "Aerodynamic", 
+                        duration: "3:27", 
+                        file: "PASTE_YOUR_NEXT_GOOGLE_DRIVE_LINK_HERE" 
+                    }
                 ]
             }
         ];
 
-        // 2. Render Library to the Web Page
+        // 2. Helper function to parse Google Drive links into streamable direct links
+        function cleanDriveLink(url) {
+            if (url.includes('drive.google.com')) {
+                // Extracts the long unique ID character block between /d/ and /view
+                const match = url.match(/\/d\/([^/]+)/);
+                if (match && match[1]) {
+                    return `https://docs.google.com/uc?export=download&id=${match[1]}`;
+                }
+            }
+            return url; // Returns original if it's a regular file or already converted
+        }
+
+        // 3. UI Generator Logic
         const libraryContainer = document.getElementById('library');
+        const audioPlayer = document.getElementById('audio-player');
+        const nowPlayingTitle = document.getElementById('now-playing-title');
+        const nowPlayingMeta = document.getElementById('now-playing-meta');
 
         function renderLibrary() {
-            libraryContainer.innerHTML = ''; // Clear container
+            libraryContainer.innerHTML = '';
 
             musicLibrary.forEach(album => {
-                // Create album card element
                 const albumCard = document.createElement('div');
                 albumCard.className = 'album-card';
 
-                // Build track list HTML strings
                 let trackListHTML = '';
                 album.tracks.forEach((track, index) => {
+                    // Escaping single quotes safely for the inline JS event
+                    const safeTitle = track.title.replace(/'/g, "\\'");
+                    const safeArtist = album.artist.replace(/'/g, "\\'");
+                    
                     trackListHTML += `
-                        <li class="track-item" onclick="playTrack('${track.file}', '${track.title}')">
+                        <li class="track-item" onclick="playTrack('${track.file}', '${safeTitle}', '${safeArtist}')">
                             <span>${index + 1}. ${track.title}</span>
                             <span class="track-duration">${track.duration}</span>
                         </li>
                     `;
                 });
 
-                // Assemble the complete card
                 albumCard.innerHTML = `
                     <div class="album-art-placeholder">${album.icon || '💿'}</div>
                     <div class="album-title">${album.title}</div>
@@ -170,18 +210,24 @@
                         ${trackListHTML}
                     </ul>
                 `;
-
                 libraryContainer.appendChild(albumCard);
             });
         }
 
-        // 3. Placeholder Play Function (For when you add files later)
-        function playTrack(fileName, trackTitle) {
-            console.log(`Now playing file: ${fileName}`);
-            alert(`🎧 Simulated playback: "${trackTitle}"\n(Target file: ${fileName})`);
+        // 4. Playback Engine Control
+        function playTrack(fileUrl, trackTitle, artistName) {
+            const streamableUrl = cleanDriveLink(fileUrl);
+            
+            audioPlayer.src = streamableUrl;
+            nowPlayingTitle.textContent = trackTitle;
+            nowPlayingMeta.textContent = artistName;
+            
+            audioPlayer.play().catch(error => {
+                console.log("Playback error: Check your file URL or link sharing permissions.", error);
+            });
         }
 
-        // Initialize the website view
+        // Initialize application
         renderLibrary();
     </script>
 </body>
