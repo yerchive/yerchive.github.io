@@ -12,6 +12,7 @@
             --text-muted: #b3b3b3;
             --accent-color: #1db954;
             --player-bg: #181818;
+            --panel-bg: #101010;
         }
 
         body {
@@ -19,36 +20,63 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
-            padding-bottom: 110px; /* Space so the player bar doesn't block content */
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll, use panel scroll */
         }
 
         header {
-            max-width: 1200px;
-            margin: 0 auto 30px auto;
+            padding: 20px 30px;
             border-bottom: 1px solid #333;
-            padding-bottom: 20px;
+            background-color: var(--bg-color);
+            z-index: 10;
         }
 
-        h1 { margin: 0; font-size: 2.5rem; }
+        h1 { margin: 0; font-size: 2rem; }
 
-        .library-container {
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Main split layout container */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden; /* Layout panels handle scrolling */
+        }
+
+        /* --- Left Column: Album Grid --- */
+        .album-grid-panel {
+            flex: 2; /* Takes up 2/3 of space */
+            padding: 30px;
+            overflow-y: auto; /* Scrollable grid */
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            align-content: start;
         }
 
+        /* simplified album card */
         .album-card {
             background-color: var(--card-bg);
             border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid transparent; /* Placeholder for active state */
         }
 
-        .album-card:hover { transform: translateY(-5px); }
+        .album-card:hover { 
+            transform: translateY(-5px);
+            background-color: #282828;
+        }
+
+        /* Highlight the card when selected */
+        .album-card.active {
+            border-color: var(--accent-color);
+            background-color: #282828;
+        }
 
         .album-art-placeholder {
             width: 100%;
@@ -58,37 +86,84 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
-            margin-bottom: 15px;
+            font-size: 4rem;
+            margin-bottom: 10px;
         }
 
-        .album-title { font-size: 1.4rem; margin: 0 0 5px 0; font-weight: bold; }
-        .album-meta { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px; }
+        .album-title { font-size: 1.1rem; margin: 0; font-weight: bold; color: var(--text-color); }
 
-        .track-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid #333; padding-top: 10px; }
+        /* --- Right Column: Details Panel --- */
+        .details-panel {
+            flex: 1; /* Takes up 1/3 of space */
+            background-color: var(--panel-bg);
+            border-left: 1px solid #282828;
+            padding: 30px;
+            overflow-y: auto; /* Scrollable details */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Placeholder state for when no album is selected */
+        .details-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .details-placeholder span { font-size: 4rem; margin-bottom: 20px; }
+
+        /* Actual details content (hidden initially) */
+        .details-content { display: none; }
+        .details-content.active { display: block; }
+
+        .details-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #282828;
+        }
+
+        .details-art-large {
+            font-size: 5rem;
+            margin-right: 20px;
+        }
+
+        .details-title-block h2 { margin: 0 0 5px 0; font-size: 1.8rem; }
+        .details-meta-block { font-size: 1rem; color: var(--text-muted); }
+
+        .track-list { list-style: none; padding: 0; margin: 0; }
         
         .track-item {
             display: flex;
             justify-content: space-between;
-            padding: 8px 5px;
-            font-size: 0.95rem;
+            padding: 10px 10px;
+            font-size: 1rem;
             border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.2s ease;
         }
 
         .track-item:hover {
-            background-color: #2a2a2a;
+            background-color: #252525;
             color: var(--accent-color);
         }
 
-        .track-duration { color: var(--text-muted); }
+        /* State for the song that is currently playing */
+        .track-item.playing {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
 
-        /* Persistent Player Bar Styling */
+        .track-duration { color: var(--text-muted); margin-left: 15px; }
+
+        /* --- Persistent Player Bar --- */
         .player-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background-color: var(--player-bg);
             border-top: 1px solid #282828;
             padding: 15px 30px;
@@ -96,28 +171,14 @@
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
-            z-index: 1000;
+            z-index: 10;
         }
 
-        .current-track-info {
-            flex: 1;
-            min-width: 150px;
-        }
-
+        .current-track-info { flex: 1; min-width: 150px; }
         #now-playing-title { font-weight: bold; font-size: 1rem; margin-bottom: 2px; }
         #now-playing-meta { font-size: 0.85rem; color: var(--text-muted); }
-
-        .audio-controls {
-            flex: 2;
-            display: flex;
-            justify-content: center;
-        }
-
-        audio {
-            width: 100%;
-            max-width: 600px;
-            outline: none;
-        }
+        .audio-controls { flex: 2; display: flex; justify-content: center; }
+        audio { width: 100%; max-width: 600px; outline: none; }
     </style>
 </head>
 <body>
@@ -126,13 +187,38 @@
         <h1>🎵 My Music Library</h1>
     </header>
 
-    <main class="library-container" id="library">
-        </main>
+    <main class="main-container">
+        
+        <section class="album-grid-panel" id="album-grid">
+            </section>
+
+        <aside class="details-panel" id="details-panel">
+            
+            <div class="details-placeholder" id="details-placeholder">
+                <span>💿</span>
+                <p>Select an album from the left<br> to view tracks and details.</p>
+            </div>
+
+            <div class="details-content" id="details-content">
+                <div class="details-header">
+                    <div class="details-art-large" id="details-art">🍏</div>
+                    <div class="details-title-block">
+                        <h2 id="details-title">Album Title</h2>
+                        <div class="details-meta-block" id="details-meta">Artist • Year</div>
+                    </div>
+                </div>
+                <ul class="track-list" id="track-list">
+                    </ul>
+            </div>
+
+        </aside>
+
+    </main>
 
     <div class="player-bar">
         <div class="current-track-info">
             <div id="now-playing-title">No Track Selected</div>
-            <div id="now-playing-meta">Choose a song to start jamming</div>
+            <div id="now-playing-meta">Choose a song from the details panel</div>
         </div>
         <div class="audio-controls">
             <audio id="audio-player" controls></audio>
@@ -140,8 +226,7 @@
     </div>
 
     <script>
-        // 1. Data Collection 
-        // Simply paste your standard Google Drive sharing links into the 'file' parameter.
+        // 1. Data Structure (Ensure file links are 'Anyone with the link' Viewer)
         const musicLibrary = [
             {
                 title: "Discovery",
@@ -149,86 +234,95 @@
                 year: 2001,
                 icon: "🤖",
                 tracks: [
-                    { 
-                        title: "One More Time", 
-                        duration: "5:20", 
-                        file: "https://drive.google.com/file/d/166jxMcfmhUAevwj7QGz5HizLJ-cRj73T/view?usp=sharing" 
-                    },
-                    { 
-                        title: "Aerodynamic", 
-                        duration: "3:27", 
-                        file: "PASTE_YOUR_NEXT_GOOGLE_DRIVE_LINK_HERE" 
-                    }
+                    { title: "One More Time", duration: "5:20", file: "https://drive.google.com/file/d/166jxMcfmhUAevwj7QGz5HizLJ-cRj73T/view?usp=sharing" },
+                    { title: "Aerodynamic", duration: "3:27", file: "DRIVE_LINK_HERE" }
+                ]
+            },
+            {
+                title: "Abbey Road",
+                artist: "The Beatles",
+                year: 1969,
+                icon: "🍏",
+                tracks: [
+                    { title: "Come Together", duration: "4:20", file: "DRIVE_LINK_HERE" },
+                    { title: "Something", duration: "3:03", file: "DRIVE_LINK_HERE" }
                 ]
             }
         ];
 
-        // 2. Helper function to parse Google Drive links into streamable direct links
+        // 2. Drive URL Utility
         function cleanDriveLink(url) {
             if (url.includes('drive.google.com')) {
-                // Extracts the long unique ID character block between /d/ and /view
                 const match = url.match(/\/d\/([^/]+)/);
                 if (match && match[1]) {
                     return `https://docs.google.com/uc?export=download&id=${match[1]}`;
                 }
             }
-            return url; // Returns original if it's a regular file or already converted
+            return url;
         }
 
-        // 3. UI Generator Logic
-        const libraryContainer = document.getElementById('library');
+        // 3. UI Elements
+        const albumGrid = document.getElementById('album-grid');
+        const detailsPanel = document.getElementById('details-panel');
+        const detailsPlaceholder = document.getElementById('details-placeholder');
+        const detailsContent = document.getElementById('details-content');
+        
+        const detailsArt = document.getElementById('details-art');
+        const detailsTitle = document.getElementById('details-title');
+        const detailsMeta = document.getElementById('details-meta');
+        const trackList = document.getElementById('track-list');
+
         const audioPlayer = document.getElementById('audio-player');
         const nowPlayingTitle = document.getElementById('now-playing-title');
         const nowPlayingMeta = document.getElementById('now-playing-meta');
 
-        function renderLibrary() {
-            libraryContainer.innerHTML = '';
+        // 4. Core Logic
 
-            musicLibrary.forEach(album => {
-                const albumCard = document.createElement('div');
-                albumCard.className = 'album-card';
+        // A. Render the main grid (Covers only)
+        function renderGrid() {
+            albumGrid.innerHTML = '';
 
-                let trackListHTML = '';
-                album.tracks.forEach((track, index) => {
-                    // Escaping single quotes safely for the inline JS event
-                    const safeTitle = track.title.replace(/'/g, "\\'");
-                    const safeArtist = album.artist.replace(/'/g, "\\'");
-                    
-                    trackListHTML += `
-                        <li class="track-item" onclick="playTrack('${track.file}', '${safeTitle}', '${safeArtist}')">
-                            <span>${index + 1}. ${track.title}</span>
-                            <span class="track-duration">${track.duration}</span>
-                        </li>
-                    `;
-                });
+            musicLibrary.forEach((album, index) => {
+                const card = document.createElement('div');
+                card.className = 'album-card';
+                card.dataset.index = index; // Store index for lookup
 
-                albumCard.innerHTML = `
+                // Basic cover view
+                card.innerHTML = `
                     <div class="album-art-placeholder">${album.icon || '💿'}</div>
-                    <div class="album-title">${album.title}</div>
-                    <div class="album-meta">${album.artist} • ${album.year}</div>
-                    <ul class="track-list">
-                        ${trackListHTML}
-                    </ul>
+                    <p class="album-title">${album.title}</p>
                 `;
-                libraryContainer.appendChild(albumCard);
+
+                // Handle clicking the card to load details
+                card.addEventListener('click', () => showAlbumDetails(index));
+
+                albumGrid.appendChild(card);
             });
         }
 
-        // 4. Playback Engine Control
-        function playTrack(fileUrl, trackTitle, artistName) {
-            const streamableUrl = cleanDriveLink(fileUrl);
-            
-            audioPlayer.src = streamableUrl;
-            nowPlayingTitle.textContent = trackTitle;
-            nowPlayingMeta.textContent = artistName;
-            
-            audioPlayer.play().catch(error => {
-                console.log("Playback error: Check your file URL or link sharing permissions.", error);
-            });
-        }
+        // B. Load the right panel with specific album data
+        function showAlbumDetails(albumIndex) {
+            const album = musicLibrary[albumIndex];
 
-        // Initialize application
-        renderLibrary();
-    </script>
-</body>
-</html>
+            // Update 'Active' state in the grid
+            document.querySelectorAll('.album-card').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.album-card[data-index="${albumIndex}"]`).classList.add('active');
+
+            // Switch views in the details panel
+            detailsPlaceholder.style.display = 'none';
+            detailsContent.classList.add('active');
+
+            // Populate static details
+            detailsArt.textContent = album.icon || '💿';
+            detailsTitle.textContent = album.title;
+            detailsMeta.textContent = `${album.artist} • ${album.year}`;
+
+            // Populate the tracklist
+            trackList.innerHTML = '';
+            album.tracks.forEach((track, trackIndex) => {
+                const safeTitle = track.title.replace(/'/g, "\\'");
+                const safeArtist = album.artist.replace(/'/g, "\\'");
+                
+                const li = document.createElement('li');
+                li.className = 'track-item';
+                li.id = `track-${albumIndex}-${trackIndex}`; // Unique ID for highlighting
